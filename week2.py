@@ -24,6 +24,7 @@ class Solution:
         self.z = np.zeros(n)
         self.p_values = []
         self.I_values = []
+        self.I_wo_attenuation = []
         self.g_values = []
 
 RESOLUTION = 0.01
@@ -51,15 +52,8 @@ def solve_ode (parameters: Parameters, sol: Solution, times):
     n = parameters.n
     depth = parameters.depth
     deltaZ = parameters.deltaZ
-    t = parameters.t                    # [days]
     u = parameters.u                    # [m/day]
     d = parameters.d                    # [m/day]
-    l = parameters.l                    # [/day]
-    kw = parameters.kw                  # [/m]
-    kp = parameters.kp                  # [m^2/cell]
-    Io = parameters.Io                  # [umol photons /m^2 /day]
-    pmax = parameters.pmax              # [/day]
-    H = parameters.H                    # [umol photons /m^2 /day]
 
     # Defining the grid
     z = np.linspace(deltaZ/2, depth - deltaZ/2, n)
@@ -114,11 +108,26 @@ def compute_light_growth(times, param: Parameters, sol: Solution):
         g_values[i, :] = growth(param, I_values[i, :])
         sol.I_values.append(I_values[i, :].copy())
         sol.g_values.append(g_values[i, :].copy())
+    
+    return
 
+
+def compute_light(times, param: Parameters, sol: Solution):
+    I_values = np.zeros((len(times), param.n))
+
+    for i, time in enumerate(times):
+        p = np.zeros(param.n)
+        I_values[i, :] = light(param, p)
+        sol.I_wo_attenuation.append(I_values[i, :].copy())
+
+    return
 
 
 def show_result(sol: Solution, t: int, prints: str):
     times = np.arange(0, t+1, RESOLUTION)
+
+    if prints == "none":
+        return
 
     if prints != "stable" and prints != "timeseries":
         # Plotting Plankton Concentration
@@ -130,13 +139,14 @@ def show_result(sol: Solution, t: int, prints: str):
         plt.show()
 
     if prints != "stable" and prints!= "plankton":
-        # Plotting Light Intensity, Growth Rate, and Plankton Concentration
+
+        # Plotting TIMESERIES of Light Intensity, Growth Rate, and Plankton Concentration
         plt.figure(figsize=(12, 8))
 
         # Plotting Light Intensity
         plt.subplot(3, 1, 1)
         plt.imshow(np.array(sol.I_values).T, aspect='auto', cmap='viridis', extent=[0, t, sol.z[-1], sol.z[0]])
-        plt.colorbar(label='Light Intensity (I)')
+        plt.colorbar(label='Light Intensity [umol photons /m^2 /day]')
         plt.xlabel('Time [days]')
         plt.ylabel('Depth [m]')
         plt.title('Light Intensity Over Time and Depth')
@@ -152,7 +162,7 @@ def show_result(sol: Solution, t: int, prints: str):
         # Plotting Plankton Concentration
         plt.subplot(3, 1, 3)
         plt.imshow(sol.p_values.T, aspect='auto', cmap='viridis', extent=[0, t, sol.z[-1], sol.z[0]])
-        plt.colorbar(label='Plankton Concentration')
+        plt.colorbar(label='Plankton Concentration [umol/m^3]')
         plt.xlabel('Time [days]')
         plt.ylabel('Depth [m]')
         plt.title('Plankton Concentration Over Time and Depth')
@@ -161,35 +171,38 @@ def show_result(sol: Solution, t: int, prints: str):
         plt.show()
 
     if prints != "timeseries" and prints != "plankton":
-        # Plotting stable values of phi with respect to depth at the last instant
+
+        # Plotting STABLE values of phi with respect to depth at the last instant
         plt.figure(figsize=(12, 8))
 
         plt.subplot(2, 2, 1)
-        plt.plot(sol.p_values[-1].T, sol.z, color='green', linewidth=3)
+        plt.plot(sol.p_values[-1].T, sol.z, color='#3E9A4C', linewidth=3)
         plt.xlabel('Stable Plankton Concentration [umol/m^3]')
         plt.ylabel('Depth [m]')
         plt.title('Stable Plankton Concentration at t = {}'.format(int(times[-1])))
         plt.gca().invert_yaxis()
+        plt.grid()
 
         plt.subplot(2, 2, 2)
-        plt.plot(sol.I_values[-1].T, sol.z, color='orange', linewidth=3)
-        plt.xlabel('Stable Light Intensity [units??]')
+        plt.plot(sol.I_values[-1].T, sol.z, color='#FFA500', linewidth=3, label='With Attenuation')
+        plt.plot(sol.I_wo_attenuation[-1].T, sol.z, color='#A15800', linewidth=2, linestyle='--', label='Without Attenuation')
+        plt.xlabel('Stable Light Intensity [umol photons /m^2 /day]')
         plt.ylabel('Depth [m]')
         plt.title('Stable Light Intensity at t = {}'.format(int(times[-1])))
         plt.gca().invert_yaxis()
+        plt.grid()
+        plt.legend()
 
         plt.subplot(2, 2, 3)
-        plt.plot(sol.g_values[-1].T, sol.z, color='turquoise', linewidth=3)
-        plt.xlabel('Stable Growth Rate [units??]')
+        plt.plot(sol.g_values[-1].T, sol.z, color='#006572', linewidth=3)
+        plt.xlabel('Stable Growth Rate [/day]')
         plt.ylabel('Depth [m]')
         plt.title('Stable Growth Rate at t = {}'.format(int(times[-1])))
         plt.gca().invert_yaxis()
+        plt.grid()
 
         plt.tight_layout()
         plt.show()
-
-    # Plots 
-    #plot_light_intensity_growth_and_p(t, z, n, prints)
 
     return
 
@@ -206,9 +219,14 @@ def main():
     parameters = Parameters(n, depth)
     sol = Solution(n,parameters.t)
 
+    # Solve ODE for plankton concentration
     times = np.arange(0, parameters.t+1, RESOLUTION)
     solve_ode(parameters, sol, times)
+
+    # Compute light intensity (w/ and wo/ attenuation) and growth rate
     compute_light_growth(times, parameters, sol)
+    compute_light(times,parameters,sol)
+
     show_result(sol, parameters.t, prints)
 
     return
