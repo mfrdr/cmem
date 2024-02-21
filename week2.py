@@ -84,7 +84,6 @@ def solve_ode (parameters: Parameters, sol: Solution, times):
 
         # Calculate derivative of plankton concentration
         dp_dt = np.zeros(n)
-        dJ_dz = np.zeros(n)
         for i in range(0, n):
             dJ_dz = (J[i+1] - J[i]) / deltaZ
             dp_dt[i] = g[i] * p[i] - dJ_dz
