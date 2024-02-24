@@ -17,8 +17,6 @@ class Parameters:
         self.kw = 0.2
         self.kp = 15 * 10**(-12)
         self.Io = 30240000
-        self.pmax = 0.96
-        self.H = 2592000
         self.HI = 30*60*60*24       # 20; 98
         self.HN = 0.0425    # 0.0425; 0.015
         self.miu_max = 0.96
