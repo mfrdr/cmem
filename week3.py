@@ -3,13 +3,14 @@ from scipy.integrate import odeint
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 import sys
+from pformat import *
 
 # Parameters
 class Parameters:
     def __init__(self, n, depth):
         self.n = n
         self.depth = depth
-        self.deltaZ = self.depth / self.n
+        self.delta_z = self.depth / self.n
         self.t = 300
         self.u = 1.008
         self.d = 43.2
@@ -17,12 +18,12 @@ class Parameters:
         self.kw = 0.2
         self.kp = 15 * 10**(-12)
         self.Io = 30240000
-        self.HI = 30*60*60*24       # 20; 98
-        self.HN = 0.0425    # 0.0425; 0.015
+        self.HI = 30*60*60*24       # value varies between 20 and 98
+        self.HN = 0.0425            # value varies between 0.0425 and 0.015
         self.miu_max = 0.96
         self.a = 1 * 10**(-9)
         self.e = 0.5
-        self.Nb = 5                    # [mmol nutrient/m^3] (5-100)
+        self.Nb = 5                 # [mmol nutrient/m^3] (5-100)
 
 
 
@@ -46,18 +47,11 @@ RESOLUTION = 0.01
 # Compute the light intensity
 def light(param: Parameters ,p):
 
-    dI = np.cumsum((param.kw + param.kp*p)*param.deltaZ) - 1/2 * param.deltaZ * (param.kw + param.kp*p)
-    I = param.Io * np.exp(-dI)
+    di = np.cumsum((param.kw + param.kp*p)*param.delta_z) - 1/2 * param.delta_z * (param.kw + param.kp*p)
+    I = param.Io * np.exp(-di)
 
     return I
 
-
-# def growth(param: Parameters, I_values):
-
-#     pI = (param.pmax * I_values) / (param.H + I_values)
-#     g = pI - param.l
-
-#     return g
 
 def growth(p: Parameters, n, I_values):
 
@@ -72,7 +66,7 @@ def solve_ode (parameters: Parameters, sol: Solution, times):
     # Parameters
     n = parameters.n
     depth = parameters.depth
-    deltaZ = parameters.deltaZ
+    delta_z = parameters.delta_z
     u = parameters.u                    # [m/day]
     d = parameters.d                    # [m/day]
     a = parameters.a
@@ -81,7 +75,7 @@ def solve_ode (parameters: Parameters, sol: Solution, times):
 
 
     # Defining the grid
-    z = np.linspace(deltaZ/2, depth - deltaZ/2, n)
+    z = np.linspace(delta_z/2, depth - delta_z/2, n)
     sol.z = z
 
     # Defining y [P(0:n) N(n:2n)]
@@ -92,20 +86,18 @@ def solve_ode (parameters: Parameters, sol: Solution, times):
     # Derivative function
     def dydt(y,t):
 
-        dy_dt = np.zeros_like(y)
-
         # Define and calculate advective and diffusive fluxes
         Ja = np.zeros(n+1)
         Jd = np.zeros(n+1)
         JN = np.zeros(n+1)
         for i in range(1, n):
             Ja[i] = u * y[i-1]
-            Jd[i] = -d * (y[i] - y[i-1]) / deltaZ
-            JN[i] = -d * (y[n+i] - y[n+i-1]) / deltaZ
+            Jd[i] = -d * (y[i] - y[i-1]) / delta_z
+            JN[i] = -d * (y[n+i] - y[n+i-1]) / delta_z
         
         # Set boundary conditions
         Ja[0] = Ja[n] = Jd[0] = Jd[n] = JN[0] = 0
-        JN[n] = -d * (Nb - y[n+i-1]) / deltaZ
+        JN[n] = -d * (Nb - y[n+i-1]) / delta_z
         J = Ja + Jd
 
         # Calculate functional response to light
@@ -118,8 +110,8 @@ def solve_ode (parameters: Parameters, sol: Solution, times):
         dy_dt = np.zeros(2*n)
 
         for i in range(0, n-1):
-            dJ_dz = (J[i+1] - J[i]) / deltaZ
-            dJN_dz = (JN[i+1] - JN[i]) / deltaZ
+            dJ_dz = (J[i+1] - J[i]) / delta_z
+            dJN_dz = (JN[i+1] - JN[i]) / delta_z
             dP_dt[i] = g[i] * y[i] -l * y[i] - dJ_dz
             dN_dt[i] = - a * g[i] * y[i] + a * l * y[i] - dJN_dz
             
@@ -137,8 +129,6 @@ def solve_ode (parameters: Parameters, sol: Solution, times):
     for i in range(len(times)):
         sol.maxP.append(find_max(sol.p_values[i]))
         sol.maxN.append(find_max(sol.n_values[i]))
-
-    return 
 
 def find_max(vec):
     res = 0
@@ -162,8 +152,6 @@ def compute_light_growth(times, param: Parameters, sol: Solution):
         sol.maxI.append(find_max(I_values[i, :]))
         sol.maxg.append(find_max(g_values[i, :]))
 
-    return
-
 
 def compute_light(times, param: Parameters, sol: Solution):
     I_values = np.zeros((len(times), param.n))
@@ -173,11 +161,8 @@ def compute_light(times, param: Parameters, sol: Solution):
         I_values[i, :] = light(param, p)
         sol.I_wo_attenuation.append(I_values[i, :].copy())
 
-    return
-
 
 def show_result(sol: Solution, t: int, prints: str):
-    times = np.arange(0, t+1, RESOLUTION)
 
     if prints == "none":
         return
@@ -189,31 +174,31 @@ def show_result(sol: Solution, t: int, prints: str):
 
         plt.subplot(1, 2, 1)
         plt.imshow(sol.p_values.T, aspect='auto', cmap='viridis', extent=[0, t, sol.z[-1], sol.z[0]])
-        plt.colorbar(label='Plankton Concentration [umol/m^3]')
-        plt.xlabel('Time [days]')
-        plt.ylabel('Depth [m]')
-        plt.title('Plankton Concentration Over Time and Depth')
+        plt.colorbar(label=L_PLANKTON)
+        plt.xlabel(AX_TIME_D)
+        plt.ylabel(AX_DEPTH)
+        plt.title(T_PLANKTON)
 
         plt.subplot(1, 2, 2)
         plt.imshow(sol.n_values.T, aspect='auto', cmap='viridis', extent=[0, t, sol.z[-1], sol.z[0]])
-        plt.colorbar(label='Nutrients Concentration [umol/m^3]')
-        plt.xlabel('Time [days]')
-        plt.ylabel('Depth [m]')
-        plt.title('Nutrients Concentration Over Time and Depth')
+        plt.colorbar(label=L_NUTRIENTS)
+        plt.xlabel(AX_TIME_D)
+        plt.ylabel(AX_DEPTH)
+        plt.title(T_NUTRIENTS)
         plt.show()
 
     # Plotting LIMITATION of Growth by Light Intensity and Nutrients Concentration 
     # "limitation"
     if prints == "limitation" or prints == "all":
-        fig, ax1 = plt.subplots(figsize=(12, 6))
+        _, ax1 = plt.subplots(figsize=(12, 6))
 
         # Plot Nutrients on the left y-axis
-        ax1.plot(sol.n_values[-1, :] / sol.maxN[-1], sol.z, label="Nutrients", color='#006572', linewidth=3)
-        ax1.plot(np.array(sol.I_values)[-1, :] / sol.maxI[-1], sol.z, label="Light Intensity", color='#FFA500', linewidth=3)
-        ax1.plot(sol.p_values[-1, :] / sol.maxP[-1], sol.z, label="Phytoplankton", color='green', linewidth=3)
+        ax1.plot(sol.n_values[-1, :] / sol.maxN[-1], sol.z, label=L_NUTRIENTS_N, color='#006572', linewidth=3)
+        ax1.plot(np.array(sol.I_values)[-1, :] / sol.maxI[-1], sol.z, label=L_LIGHT_N, color='#FFA500', linewidth=3)
+        ax1.plot(sol.p_values[-1, :] / sol.maxP[-1], sol.z, label=L_PLANKTON_N, color='green', linewidth=3)
 
-        ax1.set_xlabel('Normalized Concentration of Nutrients, Light Intensity and Phytoplankton')
-        ax1.set_ylabel('Depth [m]')
+        ax1.set_xlabel(AX_NTR_LGT_PP)
+        ax1.set_ylabel(AX_DEPTH)
         ax1.invert_yaxis()
 
         ax1.grid(which='both', linestyle='--', linewidth=0.5)
@@ -221,7 +206,7 @@ def show_result(sol: Solution, t: int, prints: str):
 
         plt.yticks(np.linspace(100, 0, 11))
         plt.legend()
-        plt.title('Nutrients, Phytoplankton and Light Intensity Over Depth')
+        plt.title(T_NTR_LGT_PP)
         plt.show()
 
     # Plotting TIMESERIES of Light Intensity, Growth Rate, Plankton and Nutrients Concentration 
@@ -232,26 +217,26 @@ def show_result(sol: Solution, t: int, prints: str):
         # Plotting Light Intensity
         plt.subplot(3, 1, 1)
         plt.imshow(np.array(sol.I_values).T, aspect='auto', cmap='viridis', extent=[0, t, sol.z[-1], sol.z[0]])
-        plt.colorbar(label='Light Intensity [umol photons /m^2 /day]')
-        plt.xlabel('Time [days]')
-        plt.ylabel('Depth [m]')
-        plt.title('Light Intensity Over Time and Depth')
+        plt.colorbar(label=L_LIGHT)
+        plt.xlabel(AX_TIME_D)
+        plt.ylabel(AX_DEPTH)
+        plt.title(T_LIGHT)
 
         # Plotting Growth Rate
         plt.subplot(3, 1, 2)
         plt.imshow(np.array(sol.g_values).T, aspect='auto', cmap='viridis', extent=[0, t, sol.z[-1], sol.z[0]])
-        plt.colorbar(label='Growth Rate [/day]')
-        plt.xlabel('Time [days]')
-        plt.ylabel('Depth [m]')
-        plt.title('Growth Rate Over Time and Depth')
+        plt.colorbar(label=L_GROWTH)
+        plt.xlabel(AX_TIME_D)
+        plt.ylabel(AX_DEPTH)
+        plt.title(T_GROWTH)
 
         # Plotting Plankton Concentration
         plt.subplot(3, 1, 3)
         plt.imshow(sol.p_values.T, aspect='auto', cmap='viridis', extent=[0, t, sol.z[-1], sol.z[0]])
-        plt.colorbar(label='Plankton Concentration [umol/m^3]')
-        plt.xlabel('Time [days]')
-        plt.ylabel('Depth [m]')
-        plt.title('Plankton Concentration Over Time and Depth')
+        plt.colorbar(label=L_PLANKTON)
+        plt.xlabel(AX_TIME_D)
+        plt.ylabel(AX_DEPTH)
+        plt.title(T_PLANKTON)
 
         plt.tight_layout()
         plt.show()
@@ -263,34 +248,32 @@ def show_result(sol: Solution, t: int, prints: str):
 
         plt.subplot(2, 2, 1)
         plt.plot(sol.p_values[-1].T, sol.z, color='#3E9A4C', linewidth=3)
-        plt.xlabel('Stable Plankton Concentration [umol/m^3]')
-        plt.ylabel('Depth [m]')
-        plt.title('Stable Plankton Concentration at t = {}'.format(int(times[-1])))
+        plt.xlabel(L_PLANKTON)
+        plt.ylabel(AX_DEPTH)
+        plt.title(T_PLANKTON)
         plt.gca().invert_yaxis()
         plt.grid()
 
         plt.subplot(2, 2, 2)
-        plt.plot(sol.I_values[-1].T, sol.z, color='#FFA500', linewidth=3, label='With Attenuation')
-        plt.plot(sol.I_wo_attenuation[-1].T, sol.z, color='#A15800', linewidth=2, linestyle='--', label='Without Attenuation')
-        plt.xlabel('Stable Light Intensity [umol photons /m^2 /day]')
-        plt.ylabel('Depth [m]')
-        plt.title('Stable Light Intensity at t = {}'.format(int(times[-1])))
+        plt.plot(sol.I_values[-1].T, sol.z, color='#FFA500', linewidth=3, label=L_W_ATTENUATION)
+        plt.plot(sol.I_wo_attenuation[-1].T, sol.z, color='#A15800', linewidth=2, linestyle='--', label=L_WO_ATTENUATION)
+        plt.xlabel(L_LIGHT)
+        plt.ylabel(AX_DEPTH)
+        plt.title(T_LIGHT)
         plt.gca().invert_yaxis()
         plt.grid()
         plt.legend()
 
         plt.subplot(2, 2, 3)
         plt.plot(sol.g_values[-1].T, sol.z, color='#006572', linewidth=3)
-        plt.xlabel('Stable Growth Rate [/day]')
-        plt.ylabel('Depth [m]')
-        plt.title('Stable Growth Rate at t = {}'.format(int(times[-1])))
+        plt.xlabel(L_GROWTH)
+        plt.ylabel(AX_DEPTH)
+        plt.title(T_GROWTH)
         plt.gca().invert_yaxis()
         plt.grid()
 
         plt.tight_layout()
         plt.show()
-
-    return
 
 
 
@@ -304,6 +287,7 @@ def main():
     depth = int(sys.argv[2])
     prints = sys.argv[3]
 
+    # To run without arguments:
     # n = 50
     # depth = 100
     # prints = "plankton"
@@ -320,8 +304,6 @@ def main():
     compute_light(times,parameters,sol)
 
     show_result(sol, parameters.t, prints)
-
-    return
 
 if __name__ == "__main__":
     main()
