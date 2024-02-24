@@ -4,6 +4,8 @@ from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 import sys
 from pformat import *
+import cProfile
+import pstats
 
 # Parameters
 class Parameters:
@@ -291,7 +293,7 @@ def main():
     # n = 50
     # depth = 100
     # prints = "plankton"
-
+    
     parameters = Parameters(n, depth)
     sol = Solution(n)
 
@@ -304,7 +306,8 @@ def main():
     compute_light(times,parameters,sol)
 
     show_result(sol, parameters.t, prints)
-
+    
+    
 if __name__ == "__main__":
     main()
 
