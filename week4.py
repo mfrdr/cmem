@@ -111,7 +111,7 @@ def solve_ode (parameters: Parameters, sol: Solution, times):
         # Set boundary conditions
         Ja[0] = Ja[n] = Jd[0] = Jd[n] = JN[0] = JD[0] = 0
         JN[n] = -d * (Nb - y[n+i-1]) / delta_z
-        JD[n] = w * y[-1]
+        JD[n] = - w * y[-1]
         J = Ja + Jd
 
         # Calculate functional response to light
@@ -128,10 +128,9 @@ def solve_ode (parameters: Parameters, sol: Solution, times):
             dJ_dz = (J[i+1] - J[i]) / delta_z
             dJN_dz = (JN[i+1] - JN[i]) / delta_z
             dJD_dz = (JD[i+1] - JD[i]) / delta_z
-            dP_dz = (y[i+1] - y[i]) / delta_z
             dD_dz = (y[2*n+i+1] - y[2*n+i]) / delta_z
 
-            dP_dt[i] = g[i]*y[i] - m*y[i] - gamma*y[i]**2 - 0*u*dP_dz - dJ_dz
+            dP_dt[i] = g[i]*y[i] - m*y[i] - gamma*y[i]**2 - dJ_dz
             # print(g[i]*y[i], m*y[i], gamma*y[i]**2, dJ_dz)
             dN_dt[i] = - g[i]*y[i] + tau*y[2*n+i] - dJN_dz
             dD_dt[i] = m*y[i] + gamma*y[i]**2 - tau*y[2*n+i] - w*dD_dz - dJD_dz
