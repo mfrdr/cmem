@@ -92,9 +92,7 @@ def solve_ode (parameters: Parameters, sol: Solution, times):
 
     # Solving ODE for p
     p_solution = odeint(ode, p, times)
-    sol.p_values = p_solution.copy()
-
-    return 
+    sol.p_values = p_solution[0].copy()
 
 
 def compute_light_growth(times, param: Parameters, sol: Solution):
@@ -108,8 +106,6 @@ def compute_light_growth(times, param: Parameters, sol: Solution):
         sol.I_values.append(I_values[i, :].copy())
         sol.g_values.append(g_values[i, :].copy())
     
-    return
-
 
 def compute_light(times, param: Parameters, sol: Solution):
     I_values = np.zeros((len(times), param.n))
@@ -118,8 +114,6 @@ def compute_light(times, param: Parameters, sol: Solution):
         p = np.zeros(param.n)
         I_values[i, :] = light(param, p)
         sol.I_wo_attenuation.append(I_values[i, :].copy())
-
-    return
 
 
 def show_result(sol: Solution, t: int, prints: str):
@@ -203,8 +197,6 @@ def show_result(sol: Solution, t: int, prints: str):
         plt.tight_layout()
         plt.show()
 
-    return
-
 def main():
 
     if len(sys.argv) != 4:
@@ -227,8 +219,6 @@ def main():
     compute_light(times,parameters,sol)
 
     show_result(sol, parameters.t, prints)
-
-    return
 
 if __name__ == "__main__":
     main()
