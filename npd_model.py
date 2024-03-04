@@ -191,33 +191,6 @@ def show_result(sol: Solution, t: int, prints: str):
     if prints == "none":
         return
 
-    # Plotting Plankton and Nutrients Concentration 
-    # "plankton"
-    # if prints == "plankton" or prints == "all":
-    #     plt.figure(figsize=(12, 6))
-
-    #     plt.subplot(1, 3, 1)
-    #     plt.imshow(sol.p_values.T, aspect='auto', cmap='viridis', extent=[0, t, sol.z[-1], sol.z[0]])
-    #     plt.colorbar(label=L_PLANKTON)
-    #     plt.xlabel(AX_TIME_D)
-    #     plt.ylabel(AX_DEPTH)
-    #     plt.title(T_PLANKTON)
-
-    #     plt.subplot(1, 3, 2)
-    #     plt.imshow(sol.n_values.T, aspect='auto', cmap='viridis', extent=[0, t, sol.z[-1], sol.z[0]])
-    #     plt.colorbar(label=L_NUTRIENTS)
-    #     plt.xlabel(AX_TIME_D)
-    #     plt.ylabel(AX_DEPTH)
-    #     plt.title(T_NUTRIENTS)
-
-    #     plt.subplot(1, 3, 3)
-    #     plt.imshow(sol.d_values.T, aspect='auto', cmap='viridis', extent=[0, t, sol.z[-1], sol.z[0]])
-    #     plt.colorbar(label=L_DETRITUS)
-    #     plt.xlabel(AX_TIME_D)
-    #     plt.ylabel(AX_DEPTH)
-    #     plt.title(T_DETRITUS)
-    #     # plt.show()
-
     # Plotting LIMITATION of Growth by Light Intensity and Nutrients Concentration 
     # "limitation"
     if prints == "limitation" or prints == "all":
